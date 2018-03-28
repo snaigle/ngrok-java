@@ -1,0 +1,20 @@
+*.class
+.DS_Store
+
+# Package Files #
+*.jar
+*.war
+*.ear
+
+#workspace Files
+.project
+target/
+.settings/
+.classpath
+.project/
+.factorypath
+.apt_generated
+
+.idea
+*.iml
+*versionsBackup
