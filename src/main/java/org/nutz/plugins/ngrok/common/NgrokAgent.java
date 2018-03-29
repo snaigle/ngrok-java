@@ -1,17 +1,5 @@
 package org.nutz.plugins.ngrok.common;
 
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
-
 import org.nutz.http.Http;
 import org.nutz.ioc.impl.PropertiesProxy;
 import org.nutz.json.Json;
@@ -21,6 +9,15 @@ import org.nutz.lang.Mirror;
 import org.nutz.lang.util.NutMap;
 import org.nutz.log.Log;
 import org.nutz.log.Logs;
+
+import java.io.*;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 public class NgrokAgent {
 
@@ -61,14 +58,14 @@ public class NgrokAgent {
         msg.putAll(payload);
         return msg;
     }
-    
+
     public static int readLen(InputStream ins) throws IOException {
         DataInputStream dis = new DataInputStream(ins);
         byte[] lenBuf = new byte[8];
         dis.readFully(lenBuf);
         return (int) bytes2long(leTobe(lenBuf, 8), 0);
     }
-    
+
     @SuppressWarnings("unchecked")
     public static NgrokMsg readMsg(String cnt) throws IOException {
         NutMap map = Json.fromJson(NutMap.class, cnt);
@@ -129,11 +126,11 @@ public class NgrokAgent {
     }
 
     public static void pipe2way(ExecutorService executorService,
-                         InputStream fromA,
-                         OutputStream toA,
-                         InputStream fromB,
-                         OutputStream toB,
-                         int bufSize) throws Exception {
+                                InputStream fromA,
+                                OutputStream toA,
+                                InputStream fromB,
+                                OutputStream toB,
+                                int bufSize) throws Exception {
         PipedStreamThread srv2loc = new PipedStreamThread("srv2loc", fromA, toB, bufSize);
         // 本地-->服务器
         PipedStreamThread loc2srv = new PipedStreamThread("loc2srv", fromB, toA, bufSize);
@@ -142,9 +139,11 @@ public class NgrokAgent {
         if (log.isDebugEnabled())
             log.debug("proxy conn exit first at " + exitFirst);
     }
-    
+
     public static boolean fixFromArgs(Object obj, String[] args) {
         Mirror<?> mirror = Mirror.me(obj);
+        // 先加载conf配置文件
+        String conf_file = System.getenv("HOME") + "/.ngrok-java/config.properties";
         for (String arg : args) {
             if (!arg.startsWith("-") || !arg.contains("=")) {
                 log.debug("bad arg = " + arg);
@@ -153,32 +152,47 @@ public class NgrokAgent {
             arg = arg.substring(1);
             String[] tmp = arg.split("=", 2);
             if ("conf_file".equals(tmp[0])) {
-                PropertiesProxy cpp = new PropertiesProxy(tmp[1]);
+                conf_file = tmp[1];
+            }
+        }
+        {
+            File file = new File(conf_file);
+            if (file.exists() && file.isFile() && file.canRead()) {
+                PropertiesProxy cpp = new PropertiesProxy(conf_file);
                 for (String key : cpp.keySet()) {
                     log.debugf("config key=%s value=%s", key, cpp.get(key));
                     mirror.setValue(obj, key, cpp.get(key));
                 }
-            } else {
+            }
+        }
+        for (String arg : args) {
+            if (!arg.startsWith("-") || !arg.contains("=")) {
+                log.debug("bad arg = " + arg);
+                return false;
+            }
+            arg = arg.substring(1);
+            String[] tmp = arg.split("=", 2);
+            if (!"conf_file".equals(tmp[0])) {
                 log.debugf("config key=%s value=%s", tmp[0], tmp[1]);
                 mirror.setValue(obj, tmp[0], tmp[1]);
             }
         }
         return true;
     }
-    
+
     public static OutputStream gzip_out(boolean enable, OutputStream out) throws IOException {
         if (enable)
             return new GZIPOutputStream(out);
         return out;
     }
-    
+
     public static InputStream gzip_in(boolean enable, InputStream ins) throws IOException {
         if (enable)
             return new GZIPInputStream(ins);
         return ins;
     }
-    
-    public static void httpResp(OutputStream out , int code, String cnt) {
+
+    public static void httpResp(OutputStream out, int code, String cnt) {
         try {
             byte[] buf = cnt.getBytes();
             String respLine = String.format("HTTP/1.0 %d %s\r\n", code, Http.getStatusText(code, ""));
@@ -189,8 +203,7 @@ public class NgrokAgent {
             out.write(buf);
             out.flush();
             out.close();
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
         }
     }
 }

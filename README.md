@@ -33,24 +33,23 @@ ngrok是一个内网穿透隧道, 可以将你的web服务映射到外网的服�
 客户端用法
 ===================================
 
-### 编程的,可控的方式
-
-```java
-NgrokClient client = new NgrokClient();
-client.auth_token = "xxxxx";
-client.start();
-Thread.sleep(long long time ...);
-client.stop();
-```
-
 ### 命令行方式
 
 ```
-java -cp nutz-plugins-ngrok.jar org.nutz.plugins.ngrok.client.NgrokClient -auth_token=xxxxxx
+java -cp nutz-plugins-ngrok.jar org.nutz.plugins.ngrok.client.NgrokClient \ 
+    -srv_host=xxxx.cn -srv_port=4443 \
+    -to_host=127.0.0.1 -to_port=8080 \
+    -auth_token=your_token
+    -conf_file=xxxx.properties 
+
 ```
+conf_file中的key 就是 srv_host=xxxx.cn 这样，去掉前面的`-`即可  
 
-NgrokClient有大量可以配置的选项,请查阅源码的javadoc注释.
+conf_file为空时默认会加载 ~/.ngork-java/config.properties 
 
+命令行中的参数会覆盖掉conf_file中的key
+
+   
 服务器端用法
 =================================
 
