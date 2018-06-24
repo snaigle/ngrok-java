@@ -203,8 +203,8 @@ public class NgrokClient implements Runnable, StatusProvider<Integer> {
     protected void handle() {
         while (status == 1) {
             try {
-                // 看看服务器想干啥
                 NgrokMsg msg = NgrokAgent.readMsg(ctlIn);
+                // 看看服务器想干啥
                 String type = msg.getType();
                 // 服务器要求我们发送新的代理链接
                 if ("ReqProxy".equals(type)) {
